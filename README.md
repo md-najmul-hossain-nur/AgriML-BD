@@ -54,10 +54,10 @@ Three models are trained and compared for each task: **Random Forest**, **Gradie
 | Name | Student ID |
 |---|---|
 | Md. Najmul Hossain Nur | 0112230536 |
-| Md. Farhan Sadik Shafin | 0112230546 |
+| Md.Yusuf Siyam | 0112230545 |
 | Tanjil Hassan Sawan | 0112230556 |
 | Asif Mustoba Sazzad | 0112230236 |
-|MD. G.M. Rabbani Bhuiyan | 011222257 |
+|Md.Nazibullah | 011221448 |
 
 **Supervised by:** Ms. Sadia Islam, Assistant Professor, Dept. of CSE
 **Submission Date:** April 28, 2026
