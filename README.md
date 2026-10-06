@@ -1,338 +1,211 @@
-# Crop Yield Prediction & Recommendation System
+# AgriML-BD
 
-<div align="center">
+AgriML-BD is a machine-learning project for Bangladesh agriculture. It combines crop, district, season, soil-proxy, and weather data to:
 
-![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square&logo=python)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-1.8-orange?style=flat-square&logo=scikit-learn)
-![Flask](https://img.shields.io/badge/Flask-2.2-black?style=flat-square&logo=flask)
-![License](https://img.shields.io/badge/License-Academic-green?style=flat-square)
+- **Recommend crops** as a classification task, returning the three highest-ranked crop classes.
+- **Estimate crop production** as a regression task using the selected crop, cultivated area, soil, and climate inputs.
 
-**A machine learning system for Bangladesh agriculture**
-that recommends suitable crops and predicts yield
-using soil nutrients, weather, and environmental data.
+The repository contains the data preparation and augmentation pipelines, model comparison experiments, and a Flask web application. Predictions are experimental decision-support estimates, not guaranteed agricultural advice.
 
-*Course: CSE-4889 (Section-D) | United International University*
+## Contents
 
-</div>
+- [Project workflow](#project-workflow)
+- [Repository structure](#repository-structure)
+- [Data](#data)
+- [Requirements](#requirements)
+- [Run the project](#run-the-project)
+- [Model comparison](#model-comparison)
+- [Web application and API](#web-application-and-api)
+- [Important limitations](#important-limitations)
 
+## Project workflow
 
+```text
+Source CSV files
+      |
+      v
+Data/Marge/Marge.py
+  Clean and merge agriculture, weather, and crop-recommendation sources
+      |
+      +-------------------------------+
+      |                               |
+      v                               v
+Preprocessing/                  Augmentation/
+Preprocesse-data.py             augment_data.py
+      |                               |
+      |                               v
+      |                       augmented_preprocess.py
+      |                               |
+      +---------------+---------------+
+                      v
+             master_comparison.py
+             RF / Gradient Boosting / MLP
+                      |
+                      v
+                 Output/*.png
 
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Team](#team)
-- [Project Structure](#project-structure)
-- [Datasets](#datasets)
-- [Pipeline](#pipeline)
-- [Models & Results](#models--results)
-- [Data Augmentation](#data-augmentation)
-- [Features](#features)
-- [How to Run](#how-to-run)
-- [Web Application](#web-application)
-
----
-
-## Overview
-
-Agriculture is the backbone of Bangladesh's economy, yet most farmers make cropping decisions based on experience alone. This project bridges that gap using machine learning — giving farmers data-driven recommendations on what to grow and how much to expect.
-
-The system solves two distinct problems:
-
-| Task | Type | Goal |
-|---|---|---|
-| **Task A** | Regression | Predict crop production yield (metric tons) given soil & weather inputs |
-| **Task B** | Classification | Recommend the most suitable crop for a given location and season |
-
-Three models are trained and compared for each task: **Random Forest**, **Gradient Boosting**, and **Deep Neural Network (MLP)**.
-
----
-
-## Team
-
-**Team Name:** Light Seekers
-
-| Name | Student ID |
-|---|---|
-| Md. Najmul Hossain Nur | 0112230536 |
-| Md.Yusuf Siyam | 0112230545 |
-| Tanjil Hassan Sawan | 0112230556 |
-| Asif Mustoba Sazzad | 0112230236 |
-|Md.Nazibullah | 011221448 |
-
-**Supervised by:** Ms. Sadia Islam, Assistant Professor, Dept. of CSE
-**Submission Date:** April 28, 2026
-
----
-
-## Project Structure
-
+Data/Marge/merged_dataset.csv ---> app.py (Flask predictions)
 ```
-MLLL/
-│
+
+The preprocessing scripts create separate regression and classification datasets. The regression target is `Production` after a `log1p` transformation; the classification target is `Crop Name`. The model-comparison script evaluates three data pipelines (merged, preprocessed, and augmented) with Random Forest, HistGradientBoosting, and scikit-learn MLP models.
+
+## Repository structure
+
+```text
+.
 ├── Data/
-│   ├── agumnetation/
-│   │   ├── train_augmented.csv          # Augmented training set (21,139 rows)
-│   │   └── test_original.csv            # Original held-out test set (373 rows)
-│   │
-│   ├── dataset/
-│   │   ├── SPAS-Dataset-BD.csv          # Primary: Bangladesh district-level crop data
-│   │   ├── Crop_recommendation.csv      # Soil nutrient features (N, P, K, pH)
-│   │   └── 65 Years of Weather Data Bangladesh.csv  # Historical rainfall by station
-│   │
+│   ├── dataset/                         # Three input CSV datasets
 │   └── Marge/
-│       └── merged_dataset.csv           # Final merged dataset (4,607 rows, 20 features)
-│
-├── RF/
-│   ├── Preprocesse-for-RF.py            # Cleaning → Encoding → Scaling → Split
-│   ├── Rf-Model-training.py             # Random Forest + Gradient Boosting training
-│   ├── model_comparison.png             # Side-by-side model metric charts
-│   └── feature_importance_re...png      # Feature importance visualization
-│
-├── DNN/
-│   ├── Augmentation.py                  # 3-technique data augmentation pipeline
-│   ├── dnn_preprocess.py                # Scale augmented data for DNN input
-│   ├── dnn_training.py                  # MLP training (regression + classification)
-│   └── dnn_results.png                  # Loss curves + metric charts
-│
-├── preprocess/
-│   ├── RF/                              # Scaled train/test splits for RF & GB
-│   └── dnn/                             # Scaled train/val/test splits for DNN
-│
-├── Marge.py                             # Dataset merging script
-├── app.py                               # Flask web application
-└── README.md
+│       ├── Marge.py                     # Clean, map, and merge source data
+│       └── merged_dataset.csv           # 4,607 rows × 20 columns
+├── Preprocessing/
+│   ├── Preprocesse-data.py              # Clean, encode, scale, and split
+│   └── Data/                            # Original-data splits and encodings
+├── Augmentation/
+│   ├── augment_data.py                  # Generate synthetic training examples
+│   ├── augmented_preprocess.py          # Group-split and scale augmented data
+│   └── Data/                            # Augmented data, splits, and plots
+├── Output/                              # Model comparison plots
+├── static/                              # Flask app images and logos
+├── api/
+│   └── index.py                         # WSGI entry point importing app
+├── app.py                               # Flask UI and /predict endpoint
+├── master_comparison.py                 # Nine model/pipeline comparisons
+├── RESULTS.txt                          # Saved experiment metrics and notes
+├── HOW_TO_RUN.txt                       # Short run guide
+└── requirements.txt                     # Core Python dependencies
 ```
 
----
+## Data
 
-## Datasets
+The source CSV files are expected under `Data/dataset/`:
 
-Three public datasets were merged to create a comprehensive feature set:
-
-| Dataset | Source | Rows | Key Features Added |
-|---|---|---|---|
-| SPAS-Dataset-BD | [Mendeley Data](https://data.mendeley.com/datasets/cphdw4z5kw/2) | 4,607 | Area, Production, Temp, Humidity, Season, District |
-| Crop Recommendation | [Kaggle](https://www.kaggle.com/datasets/atharvaingle/crop-recommendation-dataset) | 2,200 | N, P, K, pH, Rainfall |
-| 65 Years Bangladesh Weather | [Kaggle](https://www.kaggle.com/datasets/emonreza/65-years-of-weather-data-bangladesh-preprocessed) | — | District-wise historical Rainfall |
-
-Datasets were merged using `Crop Name` and `District` as join keys, filling missing soil and rainfall features through crop-class averaging and station mapping respectively.
-
----
-
-## Pipeline
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  STEP 1 │ Marge.py                                      │
-│          │ Merge 3 datasets → merged_dataset.csv         │
-│          │ Output: 4,607 rows × 20 features              │
-└──────────┴──────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│  STEP 2 │ RF/Preprocesse-for-RF.py                      │
-│          │ Drop leaky columns → Remove outliers (IQR)    │
-│          │ Label encode → Log-transform → Scale → Split  │
-│          │ Output: preprocess/RF/ (train 80%, test 20%)  │
-└──────────┴──────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│  STEP 3 │ RF/Rf-Model-training.py                       │
-│          │ Train Random Forest + Gradient Boosting        │
-│          │ Output: model_comparison.png                   │
-│          │         feature_importance_regression.png      │
-└──────────┴──────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│  STEP 4 │ DNN/Augmentation.py                           │
-│          │ Gaussian Noise + Interpolation + Seasonal Shift│
-│          │ Output: train_augmented.csv (21,139 rows)      │
-└──────────┴──────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│  STEP 5 │ DNN/dnn_preprocess.py                         │
-│          │ StandardScale augmented data → Train/Val split │
-│          │ Output: preprocess/dnn/ (train 90%, val 10%)   │
-└──────────┴──────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│  STEP 6 │ DNN/dnn_training.py                           │
-│          │ Train MLP (Regression + Classification)        │
-│          │ Output: dnn_results.png                        │
-└──────────┴──────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│  STEP 7 │ app.py                                        │
-│          │ Launch Flask web app → http://localhost:5000   │
-└──────────┴──────────────────────────────────────────────┘
-```
-
----
-
-## Models & Results
-
-### Task A — Yield Prediction (Regression)
-
-| Model | Test R² | RMSE | MAE | Notes |
-|---|---|---|---|---|
-| Random Forest | 0.8952 | 0.6085 | 0.4247 | Strong baseline |
-| **Gradient Boosting** | **0.9110** | **0.5607** | **0.4013** | ✅ Best regression model |
-| DNN (MLP) | 0.8505 | 0.7267 | 0.5100 | Competitive with less data |
-
-### Task B — Crop Recommendation (Classification)
-
-| Model | Test Accuracy | F1 Score (Weighted) | Notes |
-|---|---|---|---|
-| Random Forest | 85.79% | 0.8572 | Strong baseline |
-| Gradient Boosting | 85.25% | 0.8538 | Comparable to RF |
-| **DNN (MLP)** | **91.15%** | **0.8922** | ✅ Best classification model |
-
-> **Key Finding:** Gradient Boosting excels at yield prediction (R² = 0.91), while DNN leads in crop recommendation (Accuracy = 91.15%) — benefiting from the 5.7× augmented training set.
-
----
-
-## Model Architectures
-
-**Random Forest**
-```
-n_estimators = 150 | max_depth = 20
-min_samples_leaf = 2 | class_weight = balanced
-```
-
-**Gradient Boosting (HistGradientBoosting)**
-```
-max_iter = 150 | learning_rate = 0.05 | max_depth = 6
-```
-
-**DNN — Regression (MLP)**
-```
-Input(15) → Dense(256, ReLU) → Dense(128, ReLU)
-          → Dense(64, ReLU)  → Dense(32, ReLU)
-          → Output(1, Linear)
-
-Optimizer : Adam   | Learning Rate : 0.001
-Loss      : MSE    | Batch Size    : 256
-Early Stop: patience = 20
-```
-
-**DNN — Classification (MLP)**
-```
-Input(9) → Dense(256, ReLU) → Dense(128, ReLU)
-         → Dense(64, ReLU)  → Output(72, Softmax)
-
-Optimizer : Adam          | Learning Rate : 0.001
-Loss      : Cross-Entropy | Batch Size    : 256
-Early Stop: patience = 20 | Classes       : 72 crops
-```
-
----
-
-## Data Augmentation
-
-The original dataset contained only **3,729 rows** — insufficient for training a deep neural network reliably. Three complementary augmentation techniques were applied exclusively to the training set:
-
-| Technique | Method | Rows Added |
-|---|---|---|
-| Gaussian Noise | Add ±3% random noise to all numeric features | +11,187 |
-| Class Interpolation | Linear interpolation between same-crop sample pairs (SMOTE-style) | +7,458 |
-| Seasonal Variation | Apply Bangladesh-specific seasonal temperature and humidity shifts | +3,729 |
-| **Final Training Set** | | **21,139 rows** |
-
-> ⚠️ **Important:** The test set (`test_original.csv`) contains **only original, unmodified data** to ensure honest evaluation.
-
----
-
-## Features
-
-**Task A — Regression (15 input features)**
-
-| Feature | Description |
+| File | Use |
 |---|---|
-| Area | Cultivated land area (hectares) |
-| N, P, K | Soil nitrogen, phosphorus, potassium (mg/kg) |
-| ph | Soil pH level |
-| Avg / Min / Max Temp | Temperature readings (°C) |
-| Avg / Min / Max Humidity | Relative humidity (%) |
-| Rainfall | Annual rainfall (mm) |
-| Season_enc | Encoded season (Kharif 1/2, Rabi) |
-| District_enc | Encoded district (64 districts) |
-| Crop_enc | Encoded crop type (72 crops) |
+| `SPAS-Dataset-BD.csv` | Main agricultural records, including crop, district, season, area, production, temperature, and humidity |
+| `65 Years of Weather Data Bangladesh (1948 - 2013).csv` | Historical rainfall observations by weather station |
+| `Crop_recommendation.csv` | Crop recommendation records with N, P, K, and pH values |
 
-**Task B — Classification (9 input features)**
-`N, P, K, ph, Avg Temp, Avg Humidity, Rainfall, Season_enc, District_enc`
+`Data/Marge/Marge.py` uses the SPAS data as its base table. It removes invalid crop records, fills missing season/AP Ratio values, maps districts to weather stations to add station-average rainfall, and maps crop names to crop-class average N/P/K/pH values. The result is `Data/Marge/merged_dataset.csv` (4,607 rows × 20 columns in the checked-in dataset).
 
-**Target Variables**
-- Task A → `Production_log` (log₁₊ₓ transformed yield)
-- Task B → `Crop_enc` (72 crop classes across 64 Bangladesh districts)
+The merged data includes:
 
----
-
-## How to Run
-
-### Prerequisites
-
-```bash
-pip install pandas numpy scikit-learn matplotlib seaborn flask
-```
-
-### Step-by-step
-
-```bash
-# Step 1 — Merge datasets
-python Marge.py
-
-# Step 2 — Preprocess for Random Forest & Gradient Boosting
-python RF/Preprocesse-for-RF.py
-
-# Step 3 — Train RF + Gradient Boosting models
-python RF/Rf-Model-training.py
-
-# Step 4 — Augment data for DNN
-python DNN/Augmentation.py
-
-# Step 5 — Preprocess augmented data for DNN
-python DNN/dnn_preprocess.py
-
-# Step 6 — Train DNN (MLP)
-python DNN/dnn_training.py
-
-# Step 7 — Launch web application
-python app.py
-# Open browser → http://localhost:5000
-```
-
----
-
-## Web Application
-
-The Flask web app (`app.py`) provides an interactive interface with two sections:
-
-**Farmer Dashboard**
-Enter soil nutrients (N, P, K, pH), temperature, humidity, rainfall, and district to receive an instant crop recommendation powered by the best classification model.
-
-**Model Comparison Dashboard**
-Interactive visualization comparing all three models (RF, Gradient Boosting, DNN) across all evaluation metrics — R², RMSE, MAE, Accuracy, and F1 Score.
-
----
+- Crop, district, and season
+- Area and production
+- Soil-proxy values: N, P, K, and pH
+- Temperature, humidity, and rainfall
+- Additional source fields such as AP Ratio, Transplant, Growth, and Harvest
 
 ## Requirements
 
-```
-pandas >= 1.5.0
-numpy >= 1.23.0
-scikit-learn >= 1.1.0
-matplotlib >= 3.6.0
-seaborn >= 0.12.0
-flask >= 2.2.0
+- Python 3.10 or newer
+- Dependencies in `requirements.txt`
+- Matplotlib for the preprocessing/augmentation/model-comparison charts (it is used by the scripts but is not currently listed in `requirements.txt`)
+
+Install from the repository root:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m pip install matplotlib
 ```
 
----
+## Run the project
 
-*Developed for CSE-4889 Machine Learning Course | United International University, Bangladesh*
+Run commands from the **repository root**, because the data scripts use repository-relative paths. The source CSV files must be present in `Data/dataset/`.
+
+```powershell
+# 1. Merge the source datasets
+python Data/Marge/Marge.py
+
+# 2. Prepare the original-data train/validation/test sets
+python Preprocessing/Preprocesse-data.py
+
+# 3. Generate an augmented dataset
+python Augmentation/augment_data.py
+
+# 4. Prepare train/validation/test sets from augmented data
+python Augmentation/augmented_preprocess.py
+
+# 5. Train and compare the models; generate charts in Output/
+python master_comparison.py
+
+# 6. Start the web app
+python app.py
+```
+
+Open [http://127.0.0.1:8080](http://127.0.0.1:8080) after starting the app.
+
+Steps 1–4 create the generated files consumed by the comparison script and Flask app. Some generated CSVs and model artifacts are ignored by Git, so rerun the corresponding pipeline step if they are missing.
+
+## Model comparison
+
+`master_comparison.py` compares Random Forest (RF), HistGradientBoosting (GB), and MLP (reported as DNN) on three pipelines. The values below are the recorded test results in [`RESULTS.txt`](./RESULTS.txt); they are not a guarantee of performance on new farms or future seasons.
+
+| Data pipeline | Model | Production R² | Production RMSE | Production MAE | Crop accuracy | Crop F1 |
+|---|---:|---:|---:|---:|---:|---:|
+| Merged | RF | 0.9376 | 0.6075 | 0.4203 | 0.9020 | 0.9019 |
+| Merged | GB | **0.9455** | **0.5679** | **0.3866** | 0.9032 | 0.9023 |
+| Merged | MLP/DNN | 0.8261 | 1.0142 | 0.7434 | **0.9403** | **0.9331** |
+| Preprocessed | RF | 0.8921 | 0.6101 | 0.4407 | 0.8941 | 0.8931 |
+| Preprocessed | GB | 0.9067 | 0.5674 | 0.4171 | 0.8914 | 0.8903 |
+| Preprocessed | MLP/DNN | 0.8562 | 0.7041 | 0.4828 | **0.9236** | **0.9060** |
+| Augmented | RF | 0.9082 | 0.6986 | 0.4516 | 0.9199 | 0.9196 |
+| Augmented | GB | 0.8979 | 0.7366 | 0.5090 | 0.9179 | 0.9181 |
+| Augmented | MLP/DNN | 0.8804 | 0.7974 | 0.5534 | **0.9223** | 0.9184 |
+
+In the recorded comparison, merged-data GB has the highest yield R² and lowest yield RMSE/MAE; merged-data MLP has the highest crop accuracy and F1. The charts are written to `Output/merged_dataset_comparison.png`, `Output/preprocessed_dataset_comparison.png`, `Output/augmented_dataset_comparison.png`, and `Output/master_comparison.png`.
+
+Regression metrics are calculated against the `log1p(Production)` target, so the reported RMSE/MAE values are on the transformed scale rather than the source production unit.
+
+The Flask app does **not** load the comparison script's best-performing models. It trains or loads its own bundle: a HistGradientBoosting regressor for production and a RandomForest classifier for crop ranking.
+
+## Web application and API
+
+The Flask interface is served at `/`. On startup, `app.py` loads `app_models.pkl` if present; otherwise it trains its app-specific models from `Data/Marge/merged_dataset.csv` and attempts to save the bundle. To create a usable bundle, the merged dataset must exist.
+
+The JSON endpoint `POST /predict` expects the following fields:
+
+```json
+{
+  "district": "Dhaka",
+  "season": "Rabi",
+  "crop": "Aman",
+  "N": 90,
+  "P": 42,
+  "K": 43,
+  "ph": 6.5,
+  "area": 1.0,
+  "avgTemp": 25,
+  "minTemp": 18,
+  "maxTemp": 32,
+  "avgHum": 70,
+  "minHum": 50,
+  "maxHum": 90,
+  "rainfall": 150
+}
+```
+
+Use district, season, and crop labels available in the merged dataset. The endpoint returns `recommended_crop`, `top3`, `confidence`, and `yield_tons`. The production model predicts on a log-transformed target and converts the result back with `expm1`.
+
+Example request:
+
+```powershell
+$body = @{
+  district = "Dhaka"; season = "Rabi"; crop = "Aman"
+  N = 90; P = 42; K = 43; ph = 6.5; area = 1.0
+  avgTemp = 25; minTemp = 18; maxTemp = 32
+  avgHum = 70; minHum = 50; maxHum = 90; rainfall = 150
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri http://127.0.0.1:8080/predict `
+  -Method Post -ContentType "application/json" -Body $body
+```
+
+## Important limitations
+
+- **Soil values are proxies:** N/P/K/pH are crop-class averages from the crop-recommendation dataset, not measurements from the user's field.
+- **Rainfall is a proxy:** the merge uses a mapped weather station's historical average; it is not necessarily rainfall for the relevant district, year, or season.
+- **Augmented rows are synthetic:** noise and neighbor-based interpolation increase the dataset size but do not add real agricultural observations. Augmented evaluation is not equivalent to testing only on untouched real-world observations.
+- **Prediction units need confirmation:** the app labels the estimate `yield_tons`, but the merge pipeline does not convert the source `Production` unit. Confirm the source unit before interpreting the displayed value as tons.
+- **Confidence is not calibrated:** the app derives its displayed confidence from a fixed range and the gap between classifier probabilities. It should not be interpreted as a validated probability of correctness or as the test accuracy.
+- **Metrics are experiment-specific:** results depend on the available dataset, preprocessing, random split, and saved code/results. Re-running the pipeline can produce different metrics.
