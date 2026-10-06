@@ -7,6 +7,15 @@ AgriML-BD is a machine-learning project for Bangladesh agriculture. It combines 
 
 The repository contains the data preparation and augmentation pipelines, model comparison experiments, and a Flask web application. Predictions are experimental decision-support estimates, not guaranteed agricultural advice.
 
+## Student Information
+
+| Student Name | Student ID |
+|---|---|
+| Md. Najmul Hossain Nur | 0112230536 |
+| Asif Mustoba Sazzad | 0112230236 |
+| Md. Yusuf Siyam | 0112230545 |
+| Md. Nazibullah | 011221448 |
+
 ## Contents
 
 - [Project workflow](#project-workflow)
